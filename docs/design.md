@@ -15,8 +15,8 @@ Skill names are derived from the source path, converted to a single flat, filesy
 
 Remote sources are cloned via partial (treeless) clone.
 
-- Default clone location: `~/.skilla/<name>/`
-  - Override with env var `SKILLA_PATH` (e.g. `SKILLA_PATH=~` to use `~/github.com/...`)
+- Default clone location: `~/.godzkilla/<name>/`
+  - Override with env var `GODZKILLA_PATH` (e.g. `GODZKILLA_PATH=~` to use `~/github.com/...`)
 
 Subcommands:
 

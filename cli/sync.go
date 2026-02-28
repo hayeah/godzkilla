@@ -13,29 +13,30 @@ import (
 var syncCmd = &cobra.Command{
 	Use:   "sync",
 	Short: "Sync skills from sources into a destination directory",
-	Long: `Sync makes the destination directory match the combined set of sources
+	Long: `Sync makes each destination directory match the combined set of sources
 exactly. It adds missing symlinks, updates changed ones, and removes
 symlinks that no longer belong to any source.
 
 Unlike install (which is additive-only), sync removes stale links.
 
 Examples:
-  gozkilla sync --destination ~/.claude/skills --source github.com/hayeah/skills
-  gozkilla sync --destination ~/.claude/skills --source github.com/hayeah/skills --source ./local-skills
-  gozkilla sync --destination ~/.claude/skills --source github.com/hayeah/skills --dry
+  godzkilla sync --destination ~/.claude/skills --source github.com/hayeah/skills
+  godzkilla sync --destination ~/.claude/skills --source github.com/hayeah/skills --source ./local-skills
+  godzkilla sync --destination ~/.claude/skills --destination ~/.codex/skills --source github.com/hayeah/skills
+  godzkilla sync --destination ~/.claude/skills --source github.com/hayeah/skills --dry
 `,
 	RunE: runSync,
 }
 
 var (
 	syncSources []string
-	syncDest    string
+	syncDests   []string
 	syncDry     bool
 )
 
 func init() {
-	syncCmd.Flags().StringArrayVar(&syncSources, "source", nil, "skill source (repeatable; GitHub path or local directory)")
-	syncCmd.Flags().StringVar(&syncDest, "destination", "", "destination directory for skill symlinks")
+	syncCmd.Flags().StringArrayVarP(&syncSources, "source", "s", nil, "skill source (repeatable; GitHub path or local directory)")
+	syncCmd.Flags().StringArrayVarP(&syncDests, "destination", "d", nil, "destination directory for skill symlinks (repeatable)")
 	syncCmd.Flags().BoolVar(&syncDry, "dry", false, "dry run — show what would happen without making changes")
 	_ = syncCmd.MarkFlagRequired("source")
 	_ = syncCmd.MarkFlagRequired("destination")
@@ -77,26 +78,29 @@ func runSync(cmd *cobra.Command, args []string) error {
 		fmt.Printf("found %d skill(s) in %s (base name: %s)\n", len(skills), resolved.LocalDir, baseName)
 	}
 
-	if syncDry {
-		fmt.Println("\ndry run:")
-	}
-
-	linker := gz.Linker{DestDir: syncDest, Dry: syncDry}
-	results := linker.Sync(desired)
-
-	// Sort results for stable output.
-	sort.Slice(results, func(i, j int) bool {
-		return results[i].Name < results[j].Name
-	})
-
-	gz.PrintResults(results)
-
 	errCount := 0
-	for _, r := range results {
-		if r.Err != nil {
-			errCount++
+	for _, dest := range syncDests {
+		if len(syncDests) > 1 {
+			fmt.Printf("\n→ %s\n", dest)
+		}
+
+		linker := gz.Linker{DestDir: dest, Dry: syncDry}
+		results := linker.Sync(desired)
+
+		// Sort results for stable output.
+		sort.Slice(results, func(i, j int) bool {
+			return results[i].Name < results[j].Name
+		})
+
+		gz.PrintResults(results)
+
+		for _, r := range results {
+			if r.Err != nil {
+				errCount++
+			}
 		}
 	}
+
 	if errCount > 0 {
 		return fmt.Errorf("%d error(s) during sync", errCount)
 	}

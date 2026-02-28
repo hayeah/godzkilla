@@ -10,7 +10,7 @@ import (
 type LinkResult struct {
 	Name   string
 	Target string
-	Action string // "created", "updated", "skipped", "removed", "error"
+	Action string // "create", "update", "skip", "remove"
 	Err    error
 }
 
@@ -47,7 +47,7 @@ func (l *Linker) installOne(baseName string, s Found) LinkResult {
 	existing, err := os.Readlink(linkPath)
 	if err == nil {
 		if existing == absTarget {
-			return LinkResult{Name: skillName, Target: absTarget, Action: "skipped"}
+			return LinkResult{Name: skillName, Target: absTarget, Action: "skip"}
 		}
 		// Wrong target — update.
 		if err := os.Remove(linkPath); err != nil {
@@ -62,9 +62,9 @@ func (l *Linker) installOne(baseName string, s Found) LinkResult {
 		return LinkResult{Name: skillName, Err: fmt.Errorf("symlink: %w", err)}
 	}
 
-	action := "created"
+	action := "create"
 	if existing != "" {
-		action = "updated"
+		action = "update"
 	}
 	return LinkResult{Name: skillName, Target: absTarget, Action: action}
 }
@@ -104,7 +104,7 @@ func (l *Linker) Sync(desired map[string]string) []LinkResult {
 		existing, exists := current[name]
 
 		if exists && existing == target {
-			results = append(results, LinkResult{Name: name, Target: target, Action: actionName("skip", l.Dry)})
+			results = append(results, LinkResult{Name: name, Target: target, Action: "skip"})
 			continue
 		}
 
@@ -113,22 +113,19 @@ func (l *Linker) Sync(desired map[string]string) []LinkResult {
 			verb = "update"
 		}
 
-		if l.Dry {
-			results = append(results, LinkResult{Name: name, Target: target, Action: actionName(verb, l.Dry)})
-			continue
-		}
-
-		if exists {
-			if err := os.Remove(linkPath); err != nil {
-				results = append(results, LinkResult{Name: name, Err: fmt.Errorf("remove old symlink: %w", err)})
+		if !l.Dry {
+			if exists {
+				if err := os.Remove(linkPath); err != nil {
+					results = append(results, LinkResult{Name: name, Err: fmt.Errorf("remove old symlink: %w", err)})
+					continue
+				}
+			}
+			if err := os.Symlink(target, linkPath); err != nil {
+				results = append(results, LinkResult{Name: name, Err: fmt.Errorf("symlink: %w", err)})
 				continue
 			}
 		}
-		if err := os.Symlink(target, linkPath); err != nil {
-			results = append(results, LinkResult{Name: name, Err: fmt.Errorf("symlink: %w", err)})
-			continue
-		}
-		results = append(results, LinkResult{Name: name, Target: target, Action: actionName(verb, l.Dry)})
+		results = append(results, LinkResult{Name: name, Target: target, Action: verb})
 	}
 
 	// Removals: symlinks in current but not in desired.
@@ -137,37 +134,16 @@ func (l *Linker) Sync(desired map[string]string) []LinkResult {
 			continue
 		}
 		linkPath := filepath.Join(l.DestDir, name)
-		if l.Dry {
-			results = append(results, LinkResult{Name: name, Target: target, Action: actionName("remove", l.Dry)})
-			continue
+		if !l.Dry {
+			if err := os.Remove(linkPath); err != nil {
+				results = append(results, LinkResult{Name: name, Err: fmt.Errorf("remove: %w", err)})
+				continue
+			}
 		}
-		if err := os.Remove(linkPath); err != nil {
-			results = append(results, LinkResult{Name: name, Err: fmt.Errorf("remove: %w", err)})
-			continue
-		}
-		results = append(results, LinkResult{Name: name, Target: target, Action: actionName("remove", l.Dry)})
+		results = append(results, LinkResult{Name: name, Target: target, Action: "remove"})
 	}
 
 	return results
-}
-
-// actionName returns a display string for the given verb.
-// In dry mode: "would create"; otherwise: "created".
-func actionName(verb string, dry bool) string {
-	if dry {
-		return "would " + verb
-	}
-	switch verb {
-	case "skip":
-		return "skipped"
-	case "create":
-		return "created"
-	case "update":
-		return "updated"
-	case "remove":
-		return "removed"
-	}
-	return verb + "d"
 }
 
 // PrintResults prints a summary of link results to stdout.

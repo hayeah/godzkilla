@@ -40,16 +40,16 @@ func storageName(src string) string {
 }
 
 // storageDir returns the local directory where a remote source should
-// be cloned. It respects the SKILLA_PATH env var; if unset it defaults
-// to ~/.skilla.
+// be cloned. It respects the GODZKILLA_PATH env var; if unset it defaults
+// to ~/.godzkilla.
 func storageDir(src string) (string, error) {
-	base := os.Getenv("SKILLA_PATH")
+	base := os.Getenv("GODZKILLA_PATH")
 	if base == "" {
 		home, err := os.UserHomeDir()
 		if err != nil {
 			return "", err
 		}
-		base = filepath.Join(home, ".skilla")
+		base = filepath.Join(home, ".godzkilla")
 	} else {
 		// Expand ~ manually since os.Getenv won't do it.
 		if strings.HasPrefix(base, "~/") {
@@ -60,7 +60,7 @@ func storageDir(src string) (string, error) {
 			base = filepath.Join(home, base[2:])
 		}
 	}
-	return filepath.Join(base, storageName(src)), nil
+	return filepath.Join(base, src), nil
 }
 
 // ParseRemote splits a remote source path into the repo path and an
@@ -97,10 +97,40 @@ type Resolved struct {
 	SubPath string
 }
 
+// NormalizeSource converts a browser URL into a bare host path.
+//
+//	"https://github.com/user/repo/tree/master/skills"
+//	→ "github.com/user/repo/skills"
+//
+// Non-URL inputs are returned unchanged.
+func NormalizeSource(src string) string {
+	for _, scheme := range []string{"https://", "http://"} {
+		if strings.HasPrefix(src, scheme) {
+			src = strings.TrimPrefix(src, scheme)
+			break
+		}
+	}
+	// Strip /tree/<branch>/ segment from GitHub-style URLs.
+	// github.com/user/repo/tree/branch/path → github.com/user/repo/path
+	repoPath, after := ParseRemote(src)
+	if after == "" {
+		return repoPath
+	}
+	parts := strings.SplitN(after, "/", 3) // ["tree", "branch", "path..."]
+	if len(parts) >= 2 && parts[0] == "tree" {
+		if len(parts) == 2 {
+			return repoPath // no path after branch
+		}
+		return repoPath + "/" + parts[2]
+	}
+	return src
+}
+
 // Resolve returns a Resolved for src.
 //   - If src is remote, LocalDir is the storage dir (may not exist yet).
 //   - If src is local, LocalDir is the absolute path.
 func Resolve(src string) (Resolved, error) {
+	src = NormalizeSource(src)
 	if IsRemote(src) {
 		repoPath, subPath := ParseRemote(src)
 		repoDir, err := storageDir(repoPath)
