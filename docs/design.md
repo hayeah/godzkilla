@@ -23,3 +23,10 @@ Subcommands:
 - `install --source github.com/hayeah/skills --destination ~/.claude/skills`
   - Partial-clone the source (idempotent)
   - Symlink each discovered skill into the destination
+  - Additive only — never removes existing links
+- `sync --destination ~/.claude/skills --source github.com/hayeah/skills [--source ...]`
+  - Accepts multiple `--source` flags
+  - Makes the destination an exact mirror of the combined sources
+  - Adds missing links, updates changed ones, removes stale symlinks
+  - `--dry` flag for dry run (reports actions without making changes)
+  - Only removes symlinks, never regular files or directories
