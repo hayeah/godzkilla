@@ -4,11 +4,11 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/hayeah/gozkilla/cmd"
+	"github.com/hayeah/gozkilla/cli"
 )
 
 func main() {
-	if err := cmd.Execute(); err != nil {
+	if err := cli.Execute(); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}

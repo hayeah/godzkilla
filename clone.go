@@ -1,4 +1,4 @@
-package source
+package gozkilla
 
 import (
 	"fmt"
@@ -11,7 +11,6 @@ import (
 // directory does not already exist. If localDir already contains a git repo,
 // it is left untouched (idempotent).
 func EnsureCloned(src, localDir string) error {
-	// Check if already cloned (presence of .git dir is sufficient).
 	gitDir := filepath.Join(localDir, ".git")
 	if _, err := os.Stat(gitDir); err == nil {
 		return nil // already present, nothing to do
@@ -21,7 +20,7 @@ func EnsureCloned(src, localDir string) error {
 		return fmt.Errorf("create parent dir: %w", err)
 	}
 
-	url := ToHTTPS(src)
+	url := toHTTPS(src)
 	fmt.Printf("cloning %s → %s\n", url, localDir)
 
 	cmd := exec.Command("git", "clone", "--filter=tree:0", url, localDir)
@@ -33,7 +32,7 @@ func EnsureCloned(src, localDir string) error {
 	return nil
 }
 
-// Fetch runs `git fetch --all` in localDir to update a previously cloned repo.
+// Fetch runs `git fetch --all` + fast-forward merge in localDir.
 func Fetch(localDir string) error {
 	fmt.Printf("fetching %s\n", localDir)
 	cmd := exec.Command("git", "-C", localDir, "fetch", "--all")
@@ -43,7 +42,6 @@ func Fetch(localDir string) error {
 		return fmt.Errorf("git fetch in %s: %w", localDir, err)
 	}
 
-	// Fast-forward the current branch.
 	cmd = exec.Command("git", "-C", localDir, "merge", "--ff-only", "@{u}")
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr

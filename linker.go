@@ -1,4 +1,4 @@
-package skill
+package gozkilla
 
 import (
 	"fmt"
@@ -37,12 +37,11 @@ func InstallAll(baseName string, skills []Found, destDir string) []LinkResult {
 }
 
 func installOne(baseName string, s Found, destDir string) LinkResult {
-	skillName := Name(baseName, s.RelPath)
-	target := s.SkillDir
+	skillName := SkillName(baseName, s.RelPath)
 	linkPath := filepath.Join(destDir, skillName)
 
 	// Use absolute target so symlinks work from any cwd.
-	absTarget, err := filepath.Abs(target)
+	absTarget, err := filepath.Abs(s.SkillDir)
 	if err != nil {
 		return LinkResult{Name: skillName, Err: err}
 	}

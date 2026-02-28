@@ -1,8 +1,6 @@
-package cmd
+package cli
 
-import (
-	"github.com/spf13/cobra"
-)
+import "github.com/spf13/cobra"
 
 var rootCmd = &cobra.Command{
 	Use:   "gozkilla",

@@ -1,4 +1,4 @@
-package cmd
+package cli
 
 import (
 	"fmt"
@@ -47,7 +47,6 @@ func runList(cmd *cobra.Command, args []string) error {
 		if err != nil {
 			continue
 		}
-		// Only show if SKILL.md exists in target.
 		if _, err := os.Stat(filepath.Join(target, "SKILL.md")); err != nil {
 			continue
 		}

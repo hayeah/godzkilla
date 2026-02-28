@@ -1,4 +1,4 @@
-package source
+package gozkilla
 
 import (
 	"os"
@@ -25,24 +25,24 @@ func IsRemote(src string) bool {
 	return false
 }
 
-// ToHTTPS converts a bare host path like "github.com/hayeah/skills"
+// toHTTPS converts a bare host path like "github.com/hayeah/skills"
 // to a full HTTPS clone URL.
-func ToHTTPS(src string) string {
+func toHTTPS(src string) string {
 	return "https://" + src + ".git"
 }
 
-// StorageName converts a source path to a flat filesystem-safe name
+// storageName converts a source path to a flat filesystem-safe name
 // by replacing "/" with "_".
 //
 //	github.com/hayeah/skills → github.com_hayeah_skills
-func StorageName(src string) string {
+func storageName(src string) string {
 	return strings.ReplaceAll(src, "/", "_")
 }
 
-// StorageDir returns the local directory where a remote source should
+// storageDir returns the local directory where a remote source should
 // be cloned. It respects the SKILLA_PATH env var; if unset it defaults
 // to ~/.skilla.
-func StorageDir(src string) (string, error) {
+func storageDir(src string) (string, error) {
 	base := os.Getenv("SKILLA_PATH")
 	if base == "" {
 		home, err := os.UserHomeDir()
@@ -60,7 +60,7 @@ func StorageDir(src string) (string, error) {
 			base = filepath.Join(home, base[2:])
 		}
 	}
-	return filepath.Join(base, StorageName(src)), nil
+	return filepath.Join(base, storageName(src)), nil
 }
 
 // Resolved holds the result of resolving a source identifier.
@@ -77,15 +77,15 @@ type Resolved struct {
 }
 
 // Resolve returns a Resolved for src.
-//   - If src is remote, localDir is the storage dir (may not exist yet).
-//   - If src is local, localDir is the absolute path.
+//   - If src is remote, LocalDir is the storage dir (may not exist yet).
+//   - If src is local, LocalDir is the absolute path.
 func Resolve(src string) (Resolved, error) {
 	if IsRemote(src) {
-		dir, err := StorageDir(src)
+		dir, err := storageDir(src)
 		if err != nil {
 			return Resolved{}, err
 		}
-		return Resolved{LocalDir: dir, Remote: true, Name: StorageName(src)}, nil
+		return Resolved{LocalDir: dir, Remote: true, Name: storageName(src)}, nil
 	}
 	abs, err := filepath.Abs(src)
 	if err != nil {

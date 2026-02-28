@@ -1,11 +1,10 @@
-package cmd
+package cli
 
 import (
 	"fmt"
 	"os"
 
-	"github.com/hayeah/gozkilla/internal/skill"
-	"github.com/hayeah/gozkilla/internal/source"
+	gz "github.com/hayeah/gozkilla"
 	"github.com/spf13/cobra"
 )
 
@@ -35,13 +34,13 @@ var (
 func init() {
 	installCmd.Flags().StringVar(&installSource, "source", "", "skill source (GitHub path or local directory)")
 	installCmd.Flags().StringVar(&installDest, "destination", "", "destination directory for skill symlinks")
-	installCmd.Flags().StringVar(&installName, "name", "", "override the base name used for skill naming (default: derived from source)")
+	installCmd.Flags().StringVar(&installName, "name", "", "override base name for skill naming (default: derived from source)")
 	_ = installCmd.MarkFlagRequired("source")
 	_ = installCmd.MarkFlagRequired("destination")
 }
 
 func runInstall(cmd *cobra.Command, args []string) error {
-	resolved, err := source.Resolve(installSource)
+	resolved, err := gz.Resolve(installSource)
 	if err != nil {
 		return err
 	}
@@ -52,17 +51,16 @@ func runInstall(cmd *cobra.Command, args []string) error {
 	}
 
 	if resolved.Remote {
-		if err := source.EnsureCloned(installSource, resolved.LocalDir); err != nil {
+		if err := gz.EnsureCloned(installSource, resolved.LocalDir); err != nil {
 			return err
 		}
 	}
 
-	// Verify local dir exists.
 	if _, err := os.Stat(resolved.LocalDir); err != nil {
 		return fmt.Errorf("source directory not found: %s", resolved.LocalDir)
 	}
 
-	skills, err := skill.FindAll(resolved.LocalDir)
+	skills, err := gz.FindAll(resolved.LocalDir)
 	if err != nil {
 		return fmt.Errorf("finding skills: %w", err)
 	}
@@ -72,8 +70,8 @@ func runInstall(cmd *cobra.Command, args []string) error {
 	}
 
 	fmt.Printf("found %d skill(s) in %s (base name: %s)\n", len(skills), resolved.LocalDir, baseName)
-	results := skill.InstallAll(baseName, skills, installDest)
-	skill.PrintResults(results)
+	results := gz.InstallAll(baseName, skills, installDest)
+	gz.PrintResults(results)
 
 	errCount := 0
 	for _, r := range results {

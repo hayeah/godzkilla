@@ -1,10 +1,10 @@
-package cmd
+package cli
 
 import (
 	"fmt"
 	"os"
 
-	"github.com/hayeah/gozkilla/internal/source"
+	gz "github.com/hayeah/gozkilla"
 	"github.com/spf13/cobra"
 )
 
@@ -28,11 +28,11 @@ func init() {
 }
 
 func runUpdate(cmd *cobra.Command, args []string) error {
-	if !source.IsRemote(updateSource) {
+	if !gz.IsRemote(updateSource) {
 		return fmt.Errorf("update only applies to remote sources; use git pull for local repos")
 	}
 
-	resolved, err := source.Resolve(updateSource)
+	resolved, err := gz.Resolve(updateSource)
 	if err != nil {
 		return err
 	}
@@ -41,5 +41,5 @@ func runUpdate(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("source not yet cloned; run install first: %s", resolved.LocalDir)
 	}
 
-	return source.Fetch(resolved.LocalDir)
+	return gz.Fetch(resolved.LocalDir)
 }
