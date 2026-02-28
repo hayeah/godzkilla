@@ -1,4 +1,4 @@
-module github.com/hayeah/gozkilla
+module github.com/hayeah/godzkilla
 
 go 1.25.0
 

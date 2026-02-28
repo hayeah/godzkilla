@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 
-	gz "github.com/hayeah/gozkilla"
+	gz "github.com/hayeah/godzkilla"
 	"github.com/spf13/cobra"
 )
 

@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/hayeah/gozkilla/cli"
+	"github.com/hayeah/godzkilla/cli"
 )
 
 func main() {
