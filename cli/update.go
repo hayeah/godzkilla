@@ -37,9 +37,9 @@ func runUpdate(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	if _, err := os.Stat(resolved.LocalDir); os.IsNotExist(err) {
-		return fmt.Errorf("source not yet cloned; run install first: %s", resolved.LocalDir)
+	if _, err := os.Stat(resolved.RepoDir); os.IsNotExist(err) {
+		return fmt.Errorf("source not yet cloned; run install first: %s", resolved.RepoDir)
 	}
 
-	return gz.Fetch(resolved.LocalDir)
+	return gz.Fetch(resolved.RepoDir)
 }

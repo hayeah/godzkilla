@@ -63,17 +63,38 @@ func storageDir(src string) (string, error) {
 	return filepath.Join(base, storageName(src)), nil
 }
 
+// ParseRemote splits a remote source path into the repo path and an
+// optional subpath within that repo.
+//
+//	"github.com/user/repo"         → ("github.com/user/repo", "")
+//	"github.com/user/repo/foo"     → ("github.com/user/repo", "foo")
+//	"github.com/user/repo/foo/bar" → ("github.com/user/repo", "foo/bar")
+func ParseRemote(src string) (repoPath, subPath string) {
+	parts := strings.Split(src, "/")
+	if len(parts) <= 3 {
+		return src, ""
+	}
+	return strings.Join(parts[:3], "/"), strings.Join(parts[3:], "/")
+}
+
 // Resolved holds the result of resolving a source identifier.
 type Resolved struct {
-	// LocalDir is the local filesystem path (cloned or as-is for local sources).
+	// LocalDir is the directory to walk for skills.
+	// For remote sources with a subpath this is RepoDir/SubPath.
 	LocalDir string
 	// Remote is true when src was a remote host path.
 	Remote bool
 	// Name is the flat, filesystem-safe base name for skill naming.
-	// For remote sources this is derived from the full path
-	// (e.g. "github.com_hayeah_skills"). For local sources it is the
-	// basename of the directory.
 	Name string
+	// RepoPath is the repo portion of the source (e.g. "github.com/user/repo").
+	// Empty for local sources.
+	RepoPath string
+	// RepoDir is the local clone directory for the repo root.
+	// Empty for local sources.
+	RepoDir string
+	// SubPath is the path within the repo (e.g. "foo/bar"). Empty if the
+	// source points to the whole repo.
+	SubPath string
 }
 
 // Resolve returns a Resolved for src.
@@ -81,11 +102,23 @@ type Resolved struct {
 //   - If src is local, LocalDir is the absolute path.
 func Resolve(src string) (Resolved, error) {
 	if IsRemote(src) {
-		dir, err := storageDir(src)
+		repoPath, subPath := ParseRemote(src)
+		repoDir, err := storageDir(repoPath)
 		if err != nil {
 			return Resolved{}, err
 		}
-		return Resolved{LocalDir: dir, Remote: true, Name: storageName(src)}, nil
+		localDir := repoDir
+		if subPath != "" {
+			localDir = filepath.Join(repoDir, subPath)
+		}
+		return Resolved{
+			LocalDir: localDir,
+			Remote:   true,
+			Name:     storageName(src),
+			RepoPath: repoPath,
+			RepoDir:  repoDir,
+			SubPath:  subPath,
+		}, nil
 	}
 	abs, err := filepath.Abs(src)
 	if err != nil {

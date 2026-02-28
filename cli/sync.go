@@ -52,7 +52,7 @@ func runSync(cmd *cobra.Command, args []string) error {
 		}
 
 		if resolved.Remote {
-			if err := gz.EnsureCloned(src, resolved.LocalDir); err != nil {
+			if err := gz.EnsureCloned(resolved.RepoPath, resolved.RepoDir, resolved.SubPath); err != nil {
 				return fmt.Errorf("cloning %s: %w", src, err)
 			}
 		}

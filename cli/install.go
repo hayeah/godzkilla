@@ -51,7 +51,7 @@ func runInstall(cmd *cobra.Command, args []string) error {
 	}
 
 	if resolved.Remote {
-		if err := gz.EnsureCloned(installSource, resolved.LocalDir); err != nil {
+		if err := gz.EnsureCloned(resolved.RepoPath, resolved.RepoDir, resolved.SubPath); err != nil {
 			return err
 		}
 	}
