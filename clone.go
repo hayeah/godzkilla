@@ -7,37 +7,42 @@ import (
 	"path/filepath"
 )
 
-// EnsureCloned clones repoPath into repoDir using a treeless partial clone
-// if the directory does not already exist. When subPath is non-empty, sparse
+// EnsureCloned clones the remote source using a treeless partial clone if the
+// repo directory does not already exist. When SubPath is non-empty, sparse
 // checkout is used so only that subtree is materialised on disk.
-func EnsureCloned(repoPath, repoDir, subPath string) error {
-	gitDir := filepath.Join(repoDir, ".git")
+// No-op for local sources.
+func (r *Resolved) EnsureCloned() error {
+	if !r.Remote {
+		return nil
+	}
+
+	gitDir := filepath.Join(r.RepoDir, ".git")
 
 	if _, err := os.Stat(gitDir); err != nil {
 		// Fresh clone.
-		if err := os.MkdirAll(filepath.Dir(repoDir), 0o755); err != nil {
+		if err := os.MkdirAll(filepath.Dir(r.RepoDir), 0o755); err != nil {
 			return fmt.Errorf("create parent dir: %w", err)
 		}
 
-		url := toHTTPS(repoPath)
-		fmt.Printf("cloning %s → %s\n", url, repoDir)
+		url := toHTTPS(r.RepoPath)
+		fmt.Printf("cloning %s → %s\n", url, r.RepoDir)
 
-		if subPath != "" {
-			return cloneSparse(url, repoDir, subPath)
+		if r.SubPath != "" {
+			return cloneSparse(url, r.RepoDir, r.SubPath)
 		}
-		return cloneFull(url, repoDir)
+		return cloneFull(url, r.RepoDir)
 	}
 
 	// Already cloned — ensure subpath is checked out if needed.
-	if subPath == "" {
+	if r.SubPath == "" {
 		return nil
 	}
-	if _, err := os.Stat(filepath.Join(repoDir, subPath)); err == nil {
+	if _, err := os.Stat(filepath.Join(r.RepoDir, r.SubPath)); err == nil {
 		return nil // subpath already present in working tree
 	}
 	// Add subpath to sparse checkout (works for repos already in sparse mode).
-	fmt.Printf("adding sparse checkout path: %s\n", subPath)
-	return gitRun(repoDir, "sparse-checkout", "add", subPath)
+	fmt.Printf("adding sparse checkout path: %s\n", r.SubPath)
+	return gitRun(r.RepoDir, "sparse-checkout", "add", r.SubPath)
 }
 
 func cloneFull(url, dir string) error {
@@ -70,21 +75,21 @@ func gitRun(dir string, args ...string) error {
 	return cmd.Run()
 }
 
-// Fetch runs `git fetch --all` + fast-forward merge in localDir.
-func Fetch(localDir string) error {
-	fmt.Printf("fetching %s\n", localDir)
-	cmd := exec.Command("git", "-C", localDir, "fetch", "--all")
+// Fetch runs `git fetch --all` + fast-forward merge on the cloned repo.
+func (r *Resolved) Fetch() error {
+	fmt.Printf("fetching %s\n", r.RepoDir)
+	cmd := exec.Command("git", "-C", r.RepoDir, "fetch", "--all")
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	if err := cmd.Run(); err != nil {
-		return fmt.Errorf("git fetch in %s: %w", localDir, err)
+		return fmt.Errorf("git fetch in %s: %w", r.RepoDir, err)
 	}
 
-	cmd = exec.Command("git", "-C", localDir, "merge", "--ff-only", "@{u}")
+	cmd = exec.Command("git", "-C", r.RepoDir, "merge", "--ff-only", "@{u}")
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	if err := cmd.Run(); err != nil {
-		return fmt.Errorf("git merge in %s: %w", localDir, err)
+		return fmt.Errorf("git merge in %s: %w", r.RepoDir, err)
 	}
 	return nil
 }

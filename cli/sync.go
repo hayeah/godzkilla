@@ -51,17 +51,15 @@ func runSync(cmd *cobra.Command, args []string) error {
 			return fmt.Errorf("resolving %s: %w", src, err)
 		}
 
-		if resolved.Remote {
-			if err := gz.EnsureCloned(resolved.RepoPath, resolved.RepoDir, resolved.SubPath); err != nil {
-				return fmt.Errorf("cloning %s: %w", src, err)
-			}
+		if err := resolved.EnsureCloned(); err != nil {
+			return fmt.Errorf("cloning %s: %w", src, err)
 		}
 
 		if _, err := os.Stat(resolved.LocalDir); err != nil {
 			return fmt.Errorf("source directory not found: %s", resolved.LocalDir)
 		}
 
-		skills, err := gz.FindAll(resolved.LocalDir)
+		skills, err := resolved.FindSkills()
 		if err != nil {
 			return fmt.Errorf("finding skills in %s: %w", src, err)
 		}
@@ -83,7 +81,8 @@ func runSync(cmd *cobra.Command, args []string) error {
 		fmt.Println("\ndry run:")
 	}
 
-	results := gz.SyncAll(desired, syncDest, syncDry)
+	linker := gz.Linker{DestDir: syncDest, Dry: syncDry}
+	results := linker.Sync(desired)
 
 	// Sort results for stable output.
 	sort.Slice(results, func(i, j int) bool {

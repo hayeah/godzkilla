@@ -50,17 +50,15 @@ func runInstall(cmd *cobra.Command, args []string) error {
 		baseName = installName
 	}
 
-	if resolved.Remote {
-		if err := gz.EnsureCloned(resolved.RepoPath, resolved.RepoDir, resolved.SubPath); err != nil {
-			return err
-		}
+	if err := resolved.EnsureCloned(); err != nil {
+		return err
 	}
 
 	if _, err := os.Stat(resolved.LocalDir); err != nil {
 		return fmt.Errorf("source directory not found: %s", resolved.LocalDir)
 	}
 
-	skills, err := gz.FindAll(resolved.LocalDir)
+	skills, err := resolved.FindSkills()
 	if err != nil {
 		return fmt.Errorf("finding skills: %w", err)
 	}
@@ -70,7 +68,8 @@ func runInstall(cmd *cobra.Command, args []string) error {
 	}
 
 	fmt.Printf("found %d skill(s) in %s (base name: %s)\n", len(skills), resolved.LocalDir, baseName)
-	results := gz.InstallAll(baseName, skills, installDest)
+	linker := gz.Linker{DestDir: installDest}
+	results := linker.Install(baseName, skills)
 	gz.PrintResults(results)
 
 	errCount := 0

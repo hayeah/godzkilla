@@ -10,26 +10,32 @@ import (
 type LinkResult struct {
 	Name   string
 	Target string
-	Action string // "created", "updated", "skipped", "error"
+	Action string // "created", "updated", "skipped", "removed", "error"
 	Err    error
 }
 
-// InstallAll installs all found skills into destDir by creating symlinks.
-func InstallAll(baseName string, skills []Found, destDir string) []LinkResult {
-	if err := os.MkdirAll(destDir, 0o755); err != nil {
+// Linker manages symlinks in a destination directory.
+type Linker struct {
+	DestDir string
+	Dry     bool
+}
+
+// Install creates symlinks for all found skills (additive only).
+func (l *Linker) Install(baseName string, skills []Found) []LinkResult {
+	if err := os.MkdirAll(l.DestDir, 0o755); err != nil {
 		return []LinkResult{{Err: fmt.Errorf("create dest dir: %w", err)}}
 	}
 
 	results := make([]LinkResult, len(skills))
 	for i, s := range skills {
-		results[i] = installOne(baseName, s, destDir)
+		results[i] = l.installOne(baseName, s)
 	}
 	return results
 }
 
-func installOne(baseName string, s Found, destDir string) LinkResult {
+func (l *Linker) installOne(baseName string, s Found) LinkResult {
 	skillName := SkillName(baseName, s.RelPath)
-	linkPath := filepath.Join(destDir, skillName)
+	linkPath := filepath.Join(l.DestDir, skillName)
 
 	// Use absolute target so symlinks work from any cwd.
 	absTarget, err := filepath.Abs(s.SkillDir)
@@ -63,19 +69,19 @@ func installOne(baseName string, s Found, destDir string) LinkResult {
 	return LinkResult{Name: skillName, Target: absTarget, Action: action}
 }
 
-// SyncAll makes destDir match desired exactly: creates missing links,
+// Sync makes DestDir match desired exactly: creates missing links,
 // updates changed ones, and removes links not present in desired.
-// When dry is true it reports what would happen without touching the filesystem.
-func SyncAll(desired map[string]string, destDir string, dry bool) []LinkResult {
-	if !dry {
-		if err := os.MkdirAll(destDir, 0o755); err != nil {
+// Respects l.Dry to report without touching the filesystem.
+func (l *Linker) Sync(desired map[string]string) []LinkResult {
+	if !l.Dry {
+		if err := os.MkdirAll(l.DestDir, 0o755); err != nil {
 			return []LinkResult{{Err: fmt.Errorf("create dest dir: %w", err)}}
 		}
 	}
 
-	// Scan current symlinks in destDir.
+	// Scan current symlinks in DestDir.
 	current := map[string]string{} // name → readlink target
-	entries, err := os.ReadDir(destDir)
+	entries, err := os.ReadDir(l.DestDir)
 	if err != nil && !os.IsNotExist(err) {
 		return []LinkResult{{Err: fmt.Errorf("read dest dir: %w", err)}}
 	}
@@ -83,7 +89,7 @@ func SyncAll(desired map[string]string, destDir string, dry bool) []LinkResult {
 		if e.Type()&os.ModeSymlink == 0 {
 			continue
 		}
-		target, err := os.Readlink(filepath.Join(destDir, e.Name()))
+		target, err := os.Readlink(filepath.Join(l.DestDir, e.Name()))
 		if err != nil {
 			continue
 		}
@@ -94,11 +100,11 @@ func SyncAll(desired map[string]string, destDir string, dry bool) []LinkResult {
 
 	// Creates and updates: iterate desired.
 	for name, target := range desired {
-		linkPath := filepath.Join(destDir, name)
+		linkPath := filepath.Join(l.DestDir, name)
 		existing, exists := current[name]
 
 		if exists && existing == target {
-			results = append(results, LinkResult{Name: name, Target: target, Action: actionName("skip", dry)})
+			results = append(results, LinkResult{Name: name, Target: target, Action: actionName("skip", l.Dry)})
 			continue
 		}
 
@@ -107,8 +113,8 @@ func SyncAll(desired map[string]string, destDir string, dry bool) []LinkResult {
 			verb = "update"
 		}
 
-		if dry {
-			results = append(results, LinkResult{Name: name, Target: target, Action: actionName(verb, dry)})
+		if l.Dry {
+			results = append(results, LinkResult{Name: name, Target: target, Action: actionName(verb, l.Dry)})
 			continue
 		}
 
@@ -122,7 +128,7 @@ func SyncAll(desired map[string]string, destDir string, dry bool) []LinkResult {
 			results = append(results, LinkResult{Name: name, Err: fmt.Errorf("symlink: %w", err)})
 			continue
 		}
-		results = append(results, LinkResult{Name: name, Target: target, Action: actionName(verb, dry)})
+		results = append(results, LinkResult{Name: name, Target: target, Action: actionName(verb, l.Dry)})
 	}
 
 	// Removals: symlinks in current but not in desired.
@@ -130,16 +136,16 @@ func SyncAll(desired map[string]string, destDir string, dry bool) []LinkResult {
 		if _, want := desired[name]; want {
 			continue
 		}
-		linkPath := filepath.Join(destDir, name)
-		if dry {
-			results = append(results, LinkResult{Name: name, Target: target, Action: actionName("remove", dry)})
+		linkPath := filepath.Join(l.DestDir, name)
+		if l.Dry {
+			results = append(results, LinkResult{Name: name, Target: target, Action: actionName("remove", l.Dry)})
 			continue
 		}
 		if err := os.Remove(linkPath); err != nil {
 			results = append(results, LinkResult{Name: name, Err: fmt.Errorf("remove: %w", err)})
 			continue
 		}
-		results = append(results, LinkResult{Name: name, Target: target, Action: actionName("remove", dry)})
+		results = append(results, LinkResult{Name: name, Target: target, Action: actionName("remove", l.Dry)})
 	}
 
 	return results

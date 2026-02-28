@@ -15,6 +15,11 @@ type Found struct {
 	RelPath string
 }
 
+// FindSkills discovers all skills under the resolved source directory.
+func (r *Resolved) FindSkills() ([]Found, error) {
+	return FindAll(r.LocalDir)
+}
+
 // FindAll walks rootDir recursively and returns every directory that directly
 // contains a SKILL.md file.
 func FindAll(rootDir string) ([]Found, error) {

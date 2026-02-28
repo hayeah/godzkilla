@@ -41,5 +41,5 @@ func runUpdate(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("source not yet cloned; run install first: %s", resolved.RepoDir)
 	}
 
-	return gz.Fetch(resolved.RepoDir)
+	return resolved.Fetch()
 }
