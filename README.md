@@ -5,6 +5,10 @@ description: Skill management CLI — install, sync, and update AI agent skills 
 
 # godzkilla
 
+Equip agents with superpowers. **RAWR.**
+
+![GODZKILLA](banner.jpg)
+
 Install AI agent skills from GitHub repos or local directories by symlinking them into agent skill directories.
 
 ## Usage
