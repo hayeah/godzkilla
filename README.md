@@ -11,6 +11,12 @@ Equip agents with superpowers. **RAWR.**
 
 Install AI agent skills from GitHub repos or local directories by symlinking them into agent skill directories.
 
+## Install
+
+```bash
+go install github.com/hayeah/godzkilla/cli/godzkilla@latest
+```
+
 ## Usage
 
 ```bash
