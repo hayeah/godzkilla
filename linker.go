@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"sync"
 )
 
 // LinkResult reports what happened for a single skill symlink.
@@ -16,23 +15,15 @@ type LinkResult struct {
 }
 
 // InstallAll installs all found skills into destDir by creating symlinks.
-// baseName is the flat, filesystem-safe prefix for skill names
-// (e.g. "github.com_hayeah_skills"). Operations run in parallel.
 func InstallAll(baseName string, skills []Found, destDir string) []LinkResult {
 	if err := os.MkdirAll(destDir, 0o755); err != nil {
 		return []LinkResult{{Err: fmt.Errorf("create dest dir: %w", err)}}
 	}
 
 	results := make([]LinkResult, len(skills))
-	var wg sync.WaitGroup
 	for i, s := range skills {
-		wg.Add(1)
-		go func(i int, s Found) {
-			defer wg.Done()
-			results[i] = installOne(baseName, s, destDir)
-		}(i, s)
+		results[i] = installOne(baseName, s, destDir)
 	}
-	wg.Wait()
 	return results
 }
 

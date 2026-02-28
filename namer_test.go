@@ -4,21 +4,21 @@ import "testing"
 
 func TestSkillName(t *testing.T) {
 	cases := []struct {
-		baseName string
-		relPath  string
-		want     string
+		src     string
+		relPath string
+		want    string
 	}{
-		{"github.com_hayeah_skills", "", "github.com_hayeah_skills"},
-		{"github.com_hayeah_skills", "foo", "github.com_hayeah_skills_foo"},
-		{"github.com_hayeah_skills", "bar/baz", "github.com_hayeah_skills_bar_baz"},
-		{"github.com_hayeah_dotfiles_skills", "shell-helper", "github.com_hayeah_dotfiles_skills_shell-helper"},
+		{"github.com/hayeah/skills", "", "github.com_hayeah_skills"},
+		{"github.com/hayeah/skills", "foo", "github.com_hayeah_skills_foo"},
+		{"github.com/hayeah/skills", "bar/baz", "github.com_hayeah_skills_bar_baz"},
+		{"github.com/hayeah/dotfiles/skills", "shell-helper", "github.com_hayeah_dotfiles_skills_shell-helper"},
 		{"skills", "python", "skills_python"},
 		{"skills", "", "skills"},
 	}
 	for _, c := range cases {
-		got := SkillName(c.baseName, c.relPath)
+		got := SkillName(c.src, c.relPath)
 		if got != c.want {
-			t.Errorf("SkillName(%q, %q) = %q; want %q", c.baseName, c.relPath, got, c.want)
+			t.Errorf("SkillName(%q, %q) = %q; want %q", c.src, c.relPath, got, c.want)
 		}
 	}
 }
