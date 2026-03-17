@@ -2,3 +2,6 @@ __pycache__/
 *.pyc
 *.egg-info/
 dist/
+banner-v2a.png
+banner-v2c.png
+banner.png
